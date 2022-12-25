@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="customerNS" format="json">
+      <types:shape format="weave" example="examples/customerNS-1.json"><![CDATA[%dw 2.0
+
+type customerNS = Array<{|  entityId: String,   name: String,   phone: String,   externalId: String,   email: String|}> {"example": "[{\\\"entityId\\\":\\\"Customer Name\\\",\\\"name\\\":\\\"customer name\\\",\\\"phone\\\":\\\"9199199999\\\",\\\"externalId\\\":\\\"94940340834hserkhs\\\",\\\"email\\\":\\\"jasdfjsadf@gmail.com\\\"},{\\\"entityId\\\":\\\"Customer Name\\\",\\\"name\\\":\\\"customer name\\\",\\\"phone\\\":\\\"9199199999\\\",\\\"externalId\\\":\\\"94940340834hserkhs\\\",\\\"email\\\":\\\"jasdfjsadf@gmail.com\\\"}]"}
+
+]]></types:shape>
+    </types:type>
+    <types:type name="accountJSON" format="json">
+      <types:shape format="weave" example="examples/exampleAccount.json"><![CDATA[%dw 2.0
+
+type accountJSON = Array<{|  accountName: String,   email: String,   phone: String,   accountType: String,   accountId: String,   id: String|}> {"example": "[{\\\"accountName\\\":\\\"Roob - Bergnaum\\\",\\\"email\\\":\\\"Nya_Schuster36@gmail.com\\\",\\\"phone\\\":\\\"1-428-731-0071\\\",\\\"accountType\\\":\\\"indigo\\\",\\\"accountId\\\":\\\"23734\\\",\\\"id\\\":\\\"1\\\"},{\\\"accountName\\\":\\\"Roob - Bergnaum\\\",\\\"email\\\":\\\"Nya_Schuster36@gmail.com\\\",\\\"phone\\\":\\\"1-428-731-0071\\\",\\\"accountType\\\":\\\"indigo\\\",\\\"accountId\\\":\\\"23734\\\",\\\"id\\\":\\\"1\\\"}]"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#0a638cae-a44c-463d-9e4c-6ca66518e9d1">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="accountJSON"/>
+        </types:message>
+      </types:input-event>
+      <types:output-event>
+        <types:message>
+          <types:payload type="customerNS"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

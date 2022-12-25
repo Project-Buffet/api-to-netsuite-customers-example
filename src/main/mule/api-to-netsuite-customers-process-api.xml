@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:netsuite="http://www.mulesoft.org/schema/mule/netsuite" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/netsuite http://www.mulesoft.org/schema/mule/netsuite/current/mule-netsuite.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="4e7b85a1-716a-4bae-88b3-c80be78b9975" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<netsuite:config name="NetSuite_Config" doc:name="NetSuite Config" doc:id="b8b29b02-ee47-4557-ac63-ff4630428cbf" >
+		<netsuite:token-based-authentication-connection consumerKey="${netsuite.consumerKey}" consumerSecret="${netsuite.consumerSecret}" tokenId="${netsuite.tokenID}" tokenSecret="${netsuite.tokenSecret}" account="${netsuite.accountID}" soapPort="${netsuite.soapPort}" signatureAlgorithm="${netsuite.signature}"/>
+	</netsuite:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="c55ef398-0b21-4fdf-935a-9294e243a594" >
+		<http:request-connection protocol="HTTPS" host="6272b26225fed8fcb5f87368.mockapi.io" />
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="d9b45845-999a-4e89-b07e-a241d12016eb" file="credentials/credentials-file.properties" />
+	<flow name="api-to-netsuite-accounts-example-flow" doc:id="4c2b15d5-f105-4921-9afc-409252021503" >
+		<http:listener doc:name="Listener" doc:id="9c057f38-a10e-4b46-91bf-0d5c76b5ddbc" config-ref="HTTP_Listener_config" path="/migrateCustomersAPItoNetsuite"/>
+		<http:request method="GET" doc:name="GET Account Data from API" doc:id="c6e55c11-b8fb-4ef1-abd3-f4af1af99e8d" config-ref="HTTP_Request_configuration" path="/accounts" />
+		<ee:transform doc:name="Map to JSON Array" doc:id="0a638cae-a44c-463d-9e4c-6ca66518e9d1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	entityId: payload01.accountName default "",
+	name: payload01.accountName default "",
+	phone: payload01.phone default "",
+	externalId: payload01.accountId default "",
+	email: payload01.email
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Prepare Customer for Insertion into Netsuite" doc:id="f1cbad60-2a70-457d-a26f-b6872d1424f6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[output application/xml
+ns ns0 urn:messages_2020_2.platform.webservices.netsuite.com
+ns ns01 urn:relationships_2020_2.lists.webservices.netsuite.com
+---
+{
+	ns0#addList: {
+		(payload map ( payload01 , indexOfPayload01 ) -> {
+			ns0#record @("xmlns:ns01": ns01, xsi#"type": "ns01:Customer"): {
+				ns01#entityId: payload01.entityId,
+				ns01#companyName: payload01.name,
+				ns01#phone: payload01.phone,
+				ns01#email: payload01.email,
+				ns01#externalId: payload.externalId,
+				ns01#isPerson: "F"
+			}
+		})
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<netsuite:add-list doc:name="Insert Customer(s) into Netsuite" doc:id="a2c386bd-9b70-464f-a11e-bd42af2dbdf6" config-ref="NetSuite_Config" type="Customer"/>
+		<ee:transform doc:name="Generate Success/Failure Response" doc:id="378f9959-01f0-4cec-9b80-afd2f225d959" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Success: "True"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
